@@ -19,7 +19,7 @@ public:
    * \return The TypeId.
    */
   static TypeId GetTypeId (void);
-  void Setup (Ptr<Node> node, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate);
+  void Setup (Ptr<Node> node, Ipv4Address address);
   void SendPacket (void);
 
 private:
@@ -30,7 +30,7 @@ private:
 
   Ptr<Node>       m_node;
   vector<Ptr<Socket>> m_sockets;
-  Address         m_peer;
+  Ipv4Address     m_peer;
   uint32_t        m_packetSize;
   uint32_t        m_nPackets;
   DataRate        m_dataRate;

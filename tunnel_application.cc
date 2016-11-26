@@ -38,13 +38,13 @@ TypeId TunnelApp::GetTypeId (void)
 }
 
 void
-TunnelApp::Setup (Ptr<Node> node, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate)
+TunnelApp::Setup (Ptr<Node> node, Ipv4Address address)
 {
     m_node = node;
     m_peer = address;
-    m_packetSize = packetSize;
-    m_nPackets = nPackets;
-    m_dataRate = dataRate;
+    m_packetSize = 1000;
+    m_nPackets = 10;
+    m_dataRate = DataRate("100Mbps");
 }
 
 void
@@ -54,9 +54,9 @@ TunnelApp::StartApplication (void)
     m_packetsSent = 0;
     for(uint32_t i = 1; i < m_node->GetNDevices(); i++) {
         Ptr<Socket> socket = Socket::CreateSocket (m_node, TypeId::LookupByName ("ns3::UdpSocketFactory"));
-        socket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 50000));
+        socket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 50000 + i));
         socket->BindToNetDevice(m_node->GetDevice(i));
-        socket->Connect (m_peer);
+        socket->Connect (InetSocketAddress(m_peer, 50000 + i));
         m_sockets.push_back(socket);
     }
 }

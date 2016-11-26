@@ -82,17 +82,18 @@ main (int argc, char *argv[])
     NetDeviceContainer i2 = AddInterface(nSrcDst, "0.1Mbps", "2ms");
 
     Ptr<TunnelApp> app = CreateObject<TunnelApp> ();
-    app->Setup(nSrc, InetSocketAddress(Ipv4Address("10.1.1.2"), 50000), 1040, 1000, DataRate ("100Mbps"));
+    app->Setup(nSrc, Ipv4Address("10.1.1.2"));
     nSrc->AddApplication (app);
     app->SetStartTime (Seconds (1.));
     app->SetStopTime (Seconds (20.));
     Simulator::Schedule(Seconds(1.1), &SendStuff, app);
 
     Ptr<TunnelApp> app2 = CreateObject<TunnelApp> ();
-    app2->Setup(nDst, InetSocketAddress(Ipv4Address("10.1.1.1"), 50000), 1040, 1000, DataRate ("100Mbps"));
+    app2->Setup(nDst, Ipv4Address("10.1.1.1"));
     nDst->AddApplication (app2);
     app2->SetStartTime (Seconds (1.));
     app2->SetStopTime (Seconds (20.));
+    Simulator::Schedule(Seconds(1.1), &SendStuff, app2);
 
     LogComponentEnableAll (LOG_PREFIX_TIME);
     LogComponentEnable ("SocketBoundRoutingExample", LOG_LEVEL_INFO);
