@@ -5,9 +5,14 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/virtual-net-device.h"
 #include "tunnel_application.h"
 
 using namespace ns3;
+
+Ptr<VirtualNetDevice> AddTunInterface(Ptr<Node> node, Ipv4Address tun_address);
+
+
 
 TunnelApp::TunnelApp ()
     : m_node(),
@@ -38,10 +43,11 @@ TypeId TunnelApp::GetTypeId (void)
 }
 
 void
-TunnelApp::Setup (Ptr<Node> node, Ipv4Address address)
+TunnelApp::Setup (Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address)
 {
     m_node = node;
-    m_peer = address;
+    m_tun_address = tun_address;
+    m_peer = remote_address;
     m_packetSize = 1000;
     m_nPackets = 10;
     m_dataRate = DataRate("100Mbps");
@@ -57,8 +63,12 @@ TunnelApp::StartApplication (void)
         socket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 50000 + i));
         socket->BindToNetDevice(m_node->GetDevice(i));
         socket->Connect (InetSocketAddress(m_peer, 50000 + i));
+        socket->SetRecvCallback(MakeCallback(&TunnelApp::OnPacketRecv, this));
         m_sockets.push_back(socket);
     }
+    m_tun_device = AddTunInterface(m_node, m_tun_address);
+    m_tun_device->SetSendCallback(MakeCallback(&TunnelApp::OnTunSend, this));
+    //m_tun_device->Set(MakeCallback(&TunnelApp::OnTunSend, this));
 }
 
 void
@@ -71,26 +81,16 @@ TunnelApp::StopApplication (void)
 
 }
 
-void
-TunnelApp::SendPacket (void)
-{
-    Ptr<Packet> packet = Create<Packet> (m_packetSize);
-    for(Ptr<Socket> socket : m_sockets) {
-        socket->Send (packet);
-    }
-
-    if (++m_packetsSent < m_nPackets)
-        {
-         ScheduleTx ();
-        }
+//Todo: Put packet scheduling in here
+int i = 0;
+bool TunnelApp::OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto) {
+    m_sockets[i]->Send (packet);
+    i++;
+    i %= m_sockets.size();
+    return true;
 }
 
-void
-TunnelApp::ScheduleTx (void)
-{
-    if (m_running)
-        {
-            Time tNext (Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ())));
-            m_sendEvent = Simulator::Schedule (tNext, &TunnelApp::SendPacket, this);
-        }
+void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
+    Ptr<Packet> packet = socket->Recv (65535, 0);
+    m_tun_device->Receive(packet, 0x0800, m_tun_device->GetAddress (), m_tun_device->GetAddress (), NetDevice::PACKET_HOST);
 }

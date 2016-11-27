@@ -42,6 +42,7 @@
 #include "ns3/ipv4-static-routing-helper.h"
 #include "ns3/ipv4-list-routing-helper.h"
 #include "ns3/applications-module.h"
+#include "ns3/virtual-net-device.h"
 
 #include "tunnel_application.h"
 
@@ -50,19 +51,11 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("SocketBoundRoutingExample");
 
 NetDeviceContainer AddInterface(NodeContainer nc, const char* rate, const char* delay);
-void SendStuff (Ptr<TunnelApp> app);
-void BindSock (Ptr<Socket> sock, Ptr<NetDevice> netdev);
-void srcSocketRecv (Ptr<Socket> socket);
-void dstSocketRecv (Ptr<Socket> socket);
-static const uint32_t totalTxBytes = 200000;
-static const uint32_t writeSize = 1040;
-uint8_t data[writeSize];
-void StartFlow (Ptr<Socket>, Ipv4Address, uint16_t);
-void WriteUntilBufferFull (Ptr<Socket>, uint32_t);
+Ptr<VirtualNetDevice> AddTunInterface(Ptr<Node> node, const char*addr);
 
-int 
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
+    Packet::EnablePrinting();
 
     // Allow the user to override any of the defaults and the above
     // DefaultValue::Bind ()s at run-time, via command-line arguments
@@ -82,30 +75,41 @@ main (int argc, char *argv[])
     NetDeviceContainer i2 = AddInterface(nSrcDst, "0.1Mbps", "2ms");
 
     Ptr<TunnelApp> app = CreateObject<TunnelApp> ();
-    app->Setup(nSrc, Ipv4Address("10.1.1.2"));
+    app->Setup(nSrc, Ipv4Address("172.1.1.1"), Ipv4Address("10.1.1.2"));
     nSrc->AddApplication (app);
     app->SetStartTime (Seconds (1.));
     app->SetStopTime (Seconds (20.));
-    Simulator::Schedule(Seconds(1.1), &SendStuff, app);
 
     Ptr<TunnelApp> app2 = CreateObject<TunnelApp> ();
-    app2->Setup(nDst, Ipv4Address("10.1.1.1"));
+    app2->Setup(nDst, Ipv4Address("172.1.1.2"), Ipv4Address("10.1.1.1"));
     nDst->AddApplication (app2);
     app2->SetStartTime (Seconds (1.));
     app2->SetStopTime (Seconds (20.));
-    Simulator::Schedule(Seconds(1.1), &SendStuff, app2);
+
+    // Create TCP server sink
+    uint16_t port = 50000;
+    Address sinkLocalAddress (InetSocketAddress (Ipv4Address("172.1.1.2"), port));
+    PacketSinkHelper sinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
+    ApplicationContainer sinkApp = sinkHelper.Install (nDst);
+    sinkApp.Start (Seconds (1.0));
+    sinkApp.Stop (Seconds (10.0));
+
+    // Create TCP sender
+    OnOffHelper clientHelper ("ns3::TcpSocketFactory", Address ());
+    clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+    clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+    clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
+    ApplicationContainer clientApp = clientHelper.Install(nSrc);
+    clientApp.Start (Seconds (1.0));
+    clientApp.Stop (Seconds (10.0));
+
 
     LogComponentEnableAll (LOG_PREFIX_TIME);
-    LogComponentEnable ("SocketBoundRoutingExample", LOG_LEVEL_INFO);
+    LogComponentEnable ("SocketBoundRoutingExample", LOG_LEVEL_ALL);
 
 
     Simulator::Run ();
     Simulator::Destroy ();
 
     return 0;
-}
-
-void SendStuff (Ptr<TunnelApp> app)
-{
-    app->SendPacket();
 }

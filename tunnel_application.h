@@ -19,17 +19,19 @@ public:
    * \return The TypeId.
    */
   static TypeId GetTypeId (void);
-  void Setup (Ptr<Node> node, Ipv4Address address);
-  void SendPacket (void);
+  void Setup (Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address);
+  bool OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto);
+  void OnPacketRecv(Ptr<Socket> socket);
 
 private:
   virtual void StartApplication (void);
   virtual void StopApplication (void);
 
-  void ScheduleTx (void);
 
   Ptr<Node>       m_node;
+  Ptr<VirtualNetDevice> m_tun_device;
   vector<Ptr<Socket>> m_sockets;
+  Ipv4Address     m_tun_address;
   Ipv4Address     m_peer;
   uint32_t        m_packetSize;
   uint32_t        m_nPackets;
