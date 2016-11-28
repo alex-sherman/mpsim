@@ -30,6 +30,7 @@ public:
 private:
   virtual void StartApplication (void);
   virtual void StopApplication (void);
+  bool TrySendPacket(Ptr<Packet> packet);
 
   uint32_t        m_seq;
   MPScheduler *   m_scheduler;
@@ -37,6 +38,7 @@ private:
   Ptr<VirtualNetDevice> m_tun_device;
   vector<Ptr<Socket>> m_sockets;
   vector<uint32_t> m_path_ack;
+  vector<Ptr<Packet>> m_packet_queue;
   Ipv4Address     m_tun_address;
   Ipv4Address     m_peer;
   uint32_t        m_packetSize;

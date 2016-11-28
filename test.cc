@@ -21,8 +21,20 @@ NS_LOG_COMPONENT_DEFINE ("SocketBoundRoutingExample");
 NetDeviceContainer AddInterface(NodeContainer nc, const char* rate, const char* delay);
 Ptr<VirtualNetDevice> AddTunInterface(Ptr<Node> node, const char*addr);
 
+static void SinkRx (std::string path, Ptr<const Packet> p, const Address &address) {
+    //NS_LOG_UNCOND("Sink rx: " << *p);
+}
+
+
+static void
+CwndTracer (uint32_t oldval, uint32_t newval)
+{
+  NS_LOG_UNCOND(Simulator::Now ().GetSeconds () << " " << newval << std::endl);
+}
+
 int main (int argc, char *argv[])
 {
+    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", TypeIdValue (TcpNewReno::GetTypeId ()));
     Packet::EnablePrinting();
 
     // Allow the user to override any of the defaults and the above
@@ -39,8 +51,8 @@ int main (int argc, char *argv[])
     InternetStackHelper internet;
     internet.Install (nSrcDst);
 
-    NetDeviceContainer i1 = AddInterface(nSrcDst, ".01Mbps", "1ms");
-    NetDeviceContainer i2 = AddInterface(nSrcDst, "1Mbps", "1ms");
+    NetDeviceContainer i1 = AddInterface(nSrcDst, "1Mbps", "5ms");
+    NetDeviceContainer i2 = AddInterface(nSrcDst, "2Mbps", "5ms");
 
     MPScheduler *scheduler1 = new CWNDScheduler();
     Ptr<TunnelApp> app = CreateObject<TunnelApp> ();
@@ -66,18 +78,21 @@ int main (int argc, char *argv[])
 
     // Create TCP sender
     OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
-    clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1000]"));
+    clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
-    clientHelper.SetConstantRate(DataRate("0.9Mbps"));
+    clientHelper.SetConstantRate(DataRate("4Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
-    clientApp.Stop (Seconds (10.0));
+    clientApp.Stop (Seconds (8.0));
 
 
     LogComponentEnableAll (LOG_PREFIX_TIME);
     LogComponentEnable ("SocketBoundRoutingExample", LOG_LEVEL_ALL);
 
+    Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::PacketSink/Rx",
+                    MakeCallback (&SinkRx));
+    Config::Connect ("/NodeList/*/$ns3::TcpL4Protocol/SocketList/*/CongestionWindow", MakeCallback (&CwndTracer));
 
     Simulator::Run ();
     Simulator::Destroy ();

@@ -13,7 +13,7 @@ using namespace std;
 class MPScheduler {
 public:
     virtual void Init(uint numPaths) = 0;
-    virtual uint SchedulePacket(Ptr<Packet> packet) = 0;
+    virtual int SchedulePacket(Ptr<Packet> packet) = 0;
     virtual void OnSend(Ptr<Packet> packet, TunHeader header) = 0;
     virtual void OnAck(TunHeader ackHeader) = 0;
 };
@@ -28,7 +28,7 @@ public:
 class CWNDScheduler : public MPScheduler {
 public:
     void Init(uint numPaths);
-    uint SchedulePacket(Ptr<Packet> packet);
+    int SchedulePacket(Ptr<Packet> packet);
     void OnSend(Ptr<Packet> packet, TunHeader header);
     void OnAck(TunHeader ackHeader);
     vector<double> cwnd;

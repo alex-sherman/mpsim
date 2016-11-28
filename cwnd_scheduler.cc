@@ -9,12 +9,12 @@ void CWNDScheduler::Init(uint numPaths) {
         unack.push_back(vector<UnackPacket>());
     }
 }
-uint CWNDScheduler::SchedulePacket(Ptr<Packet> packet) {
+int CWNDScheduler::SchedulePacket(Ptr<Packet> packet) {
     for(uint i = 0; i < cwnd.size(); i++) {
         if(UnackSize(i) + packet->GetSize() < cwnd[i])
             return i;
     }
-    return 0;
+    return -1;
 }
 void CWNDScheduler::OnAck(TunHeader ackHeader) {
     bool loss = false;
@@ -28,14 +28,16 @@ void CWNDScheduler::OnAck(TunHeader ackHeader) {
 
         unack[ackHeader.path].erase(unack[ackHeader.path].begin());
     }
-    if(loss)
+    if(loss) {
         cwnd[ackHeader.path] = fmax(3000, cwnd[ackHeader.path] / 2);
+        NS_LOG_UNCOND("LOSS");
+    }
     else
         cwnd[ackHeader.path] += size * size / cwnd[ackHeader.path];
-    NS_LOG_UNCOND("Path: " << (int)ackHeader.path << " cwnd: " << cwnd[ackHeader.path] << " unack: " << UnackSize(ackHeader.path));
+    //NS_LOG_UNCOND("Path: " << (int)ackHeader.path << " cwnd: " << cwnd[ackHeader.path] << " unack: " << UnackSize(ackHeader.path));
 }
 void CWNDScheduler::OnSend(Ptr<Packet> packet, TunHeader header) {
-    NS_LOG_UNCOND("Send on " << (int)header.path);
+    //NS_LOG_UNCOND(Simulator::Now ().GetSeconds () << "Send on " << header << " what " << unack[header.path].size());
     unack[header.path].push_back(UnackPacket(header.path_seq, packet->GetSize()));
 }
 uint CWNDScheduler::UnackSize(uint path) {

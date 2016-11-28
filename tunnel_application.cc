@@ -18,6 +18,7 @@ Ptr<VirtualNetDevice> AddTunInterface(Ptr<Node> node, Ipv4Address tun_address);
 TunnelApp::TunnelApp ()
     : m_node(),
         m_sockets(),
+        m_packet_queue(),
         m_peer(),
         m_packetSize(0),
         m_nPackets(0),
@@ -85,8 +86,10 @@ TunnelApp::StopApplication (void)
 
 }
 
-bool TunnelApp::OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto) {
-    uint index = m_scheduler->SchedulePacket(packet);
+bool TunnelApp::TrySendPacket(Ptr<Packet> packet) {
+    int index = m_scheduler->SchedulePacket(packet);
+    if(index < 0)
+        return false;
     TunHeader tunHeader;
     tunHeader.type = TunType::data;
     tunHeader.path = index;
@@ -95,6 +98,13 @@ bool TunnelApp::OnTunSend(Ptr<Packet> packet, const Address &src, const Address 
     packet->AddHeader(tunHeader);
     m_scheduler->OnSend(packet, tunHeader);
     m_sockets[index]->Send (packet);
+    return true;
+}
+
+bool TunnelApp::OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto) {
+    if(m_packet_queue.size() > 0 || !TrySendPacket(packet)) {
+        m_packet_queue.push_back(packet);
+    }
     return true;
 }
 
@@ -115,5 +125,8 @@ void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
     }
     else if(tunHeader.type == TunType::ack) {
         m_scheduler->OnAck(tunHeader);
+        // Attempt to send any queued packets
+        while(m_packet_queue.size() > 0 && TrySendPacket(m_packet_queue[0]))
+            m_packet_queue.erase(m_packet_queue.begin());
     }
 }
