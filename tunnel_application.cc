@@ -18,7 +18,6 @@ Ptr<VirtualNetDevice> AddTunInterface(Ptr<Node> node, Ipv4Address tun_address);
 TunnelApp::TunnelApp ()
     : m_node(),
         m_sockets(),
-        m_packet_queue(),
         m_peer(),
         m_packetSize(0),
         m_nPackets(0),
@@ -71,7 +70,7 @@ TunnelApp::StartApplication (void)
         m_sockets.push_back(socket);
         m_path_ack.push_back(0);
     }
-    m_scheduler->Init(m_sockets.size());
+    m_scheduler->Init(m_sockets.size(), this);
     m_tun_device = AddTunInterface(m_node, m_tun_address);
     m_tun_device->SetSendCallback(MakeCallback(&TunnelApp::OnTunSend, this));
 }
@@ -86,25 +85,22 @@ TunnelApp::StopApplication (void)
 
 }
 
-bool TunnelApp::TrySendPacket(Ptr<Packet> packet) {
-    int index = m_scheduler->SchedulePacket(packet);
-    if(index < 0)
-        return false;
+void TunnelApp::TunSendIfe(Ptr<Packet> packet, uint interface) {
     TunHeader tunHeader;
-    tunHeader.type = TunType::data;
-    tunHeader.path = index;
-    tunHeader.seq = m_seq++;
-    tunHeader.path_seq = m_path_ack[index]++;
+    packet->RemoveHeader(tunHeader);
+    tunHeader.path = interface;
+    tunHeader.path_seq = m_path_ack[interface]++;
     packet->AddHeader(tunHeader);
     m_scheduler->OnSend(packet, tunHeader);
-    m_sockets[index]->Send (packet);
-    return true;
+    m_sockets[interface]->Send(packet);
 }
 
 bool TunnelApp::OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto) {
-    if(m_packet_queue.size() > 0 || !TrySendPacket(packet)) {
-        m_packet_queue.push_back(packet);
-    }
+    TunHeader tunHeader;
+    tunHeader.type = TunType::data;
+    tunHeader.seq = m_seq++;
+    packet->AddHeader(tunHeader);
+    m_scheduler->SchedulePacket(packet);
     return true;
 }
 
@@ -125,8 +121,5 @@ void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
     }
     else if(tunHeader.type == TunType::ack) {
         m_scheduler->OnAck(tunHeader);
-        // Attempt to send any queued packets
-        while(m_packet_queue.size() > 0 && TrySendPacket(m_packet_queue[0]))
-            m_packet_queue.erase(m_packet_queue.begin());
     }
 }

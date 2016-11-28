@@ -5,15 +5,17 @@
 #include "ns3/packet.h"
 #include "ns3/header.h"
 #include "tunnel_header.h"
+#include "tunnel_application.h"
 #include <vector>
 
 using namespace ns3;
 using namespace std;
 
+class TunnelApp;
 class MPScheduler {
 public:
-    virtual void Init(uint numPaths) = 0;
-    virtual int SchedulePacket(Ptr<Packet> packet) = 0;
+    virtual void Init(uint numPaths, TunnelApp *tunnelApp) = 0;
+    virtual void SchedulePacket(Ptr<Packet> packet) = 0;
     virtual void OnSend(Ptr<Packet> packet, TunHeader header) = 0;
     virtual void OnAck(TunHeader ackHeader) = 0;
 };
@@ -27,14 +29,17 @@ public:
 
 class CWNDScheduler : public MPScheduler {
 public:
-    void Init(uint numPaths);
-    int SchedulePacket(Ptr<Packet> packet);
+    void Init(uint numPaths, TunnelApp *tunnelApp);
+    bool TrySendPacket(Ptr<Packet> packet);
+    void SchedulePacket(Ptr<Packet> packet);
     void OnSend(Ptr<Packet> packet, TunHeader header);
     void OnAck(TunHeader ackHeader);
     vector<double> cwnd;
     vector<vector<UnackPacket>> unack;
 private:
+    TunnelApp *tunnelApp;
     uint UnackSize(uint path);
+    vector<Ptr<Packet>> m_packet_queue;
 };
 
 #endif

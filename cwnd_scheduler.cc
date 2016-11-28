@@ -3,18 +3,27 @@
 
 #include "ns3/core-module.h"
 
-void CWNDScheduler::Init(uint numPaths) {
+void CWNDScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
+    this->tunnelApp = tunnelApp;
     for(uint i = 0; i < numPaths; i++) {
         cwnd.push_back(3000);
         unack.push_back(vector<UnackPacket>());
     }
 }
-int CWNDScheduler::SchedulePacket(Ptr<Packet> packet) {
+bool CWNDScheduler::TrySendPacket(Ptr<Packet> packet) {
     for(uint i = 0; i < cwnd.size(); i++) {
-        if(UnackSize(i) + packet->GetSize() < cwnd[i])
-            return i;
+        if(UnackSize(i) + packet->GetSize() < cwnd[i]) {
+            tunnelApp->TunSendIfe(packet, i);
+            return true;
+        }
     }
-    return -1;
+    return false;
+}
+void CWNDScheduler::SchedulePacket(Ptr<Packet> packet) {
+    if(m_packet_queue.size() > 0 || !TrySendPacket(packet)) {
+        // If no interface can be found with capacity, queue the packet
+        m_packet_queue.push_back(packet);
+    }
 }
 void CWNDScheduler::OnAck(TunHeader ackHeader) {
     bool loss = false;
@@ -34,6 +43,9 @@ void CWNDScheduler::OnAck(TunHeader ackHeader) {
     }
     else
         cwnd[ackHeader.path] += size * size / cwnd[ackHeader.path];
+    // Attempt to send any queued packets
+    while(m_packet_queue.size() > 0 && TrySendPacket(m_packet_queue[0]))
+        m_packet_queue.erase(m_packet_queue.begin());
     //NS_LOG_UNCOND("Path: " << (int)ackHeader.path << " cwnd: " << cwnd[ackHeader.path] << " unack: " << UnackSize(ackHeader.path));
 }
 void CWNDScheduler::OnSend(Ptr<Packet> packet, TunHeader header) {

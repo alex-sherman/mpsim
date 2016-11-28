@@ -6,12 +6,14 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/virtual-net-device.h"
 #include "scheduler.h"
 #include <vector>
 
 using namespace ns3;
 using namespace std;
 
+class MPScheduler;
 class TunnelApp : public Application
 {
 public:
@@ -25,12 +27,12 @@ public:
   static TypeId GetTypeId (void);
   void Setup (MPScheduler *scheduler, Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address);
   bool OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto);
+  void TunSendIfe(Ptr<Packet> packet, uint interface);
   void OnPacketRecv(Ptr<Socket> socket);
 
 private:
   virtual void StartApplication (void);
   virtual void StopApplication (void);
-  bool TrySendPacket(Ptr<Packet> packet);
 
   uint32_t        m_seq;
   MPScheduler *   m_scheduler;
@@ -38,7 +40,6 @@ private:
   Ptr<VirtualNetDevice> m_tun_device;
   vector<Ptr<Socket>> m_sockets;
   vector<uint32_t> m_path_ack;
-  vector<Ptr<Packet>> m_packet_queue;
   Ipv4Address     m_tun_address;
   Ipv4Address     m_peer;
   uint32_t        m_packetSize;
