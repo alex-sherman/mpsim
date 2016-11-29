@@ -73,30 +73,3 @@ uint CWNDScheduler::UnackSize(uint path) {
     }
     return size;
 }
-
-bool FDBSScheduler::TrySendPacket(Ptr<Packet> packet) {
-    return CWNDScheduler::TrySendPacket(packet);
-}
-
-void FDBSScheduler::ServiceQueue() {
-    NS_LOG_UNCOND("queue size: " << m_packet_queue.size());
-    double delays[] = {0.012, 0.012};
-    double bws[] = {9.6,19.2};
-    while(m_packet_queue.size() > 0) {
-        uint i = 0;
-        for(; i < cwnd.size(); i++) {
-            if(PathAvailable(i))
-                break;
-        }
-        if(i == cwnd.size())
-            return;
-        uint qi = fmin(m_packet_queue.size() - 1, (delays[i] - delays[0]) * bws[i]);
-        if(qi == m_packet_queue.size() - 1)
-            NS_LOG_UNCOND("Queue not full enough");
-        TunHeader tunHeader;
-        m_packet_queue[qi]->PeekHeader(tunHeader);
-        NS_LOG_UNCOND("Sending "<<tunHeader<< " "<<qi);
-        tunnelApp->TunSendIfe(m_packet_queue[qi], i);
-        m_packet_queue.erase(m_packet_queue.begin() + qi);
-    }
-}

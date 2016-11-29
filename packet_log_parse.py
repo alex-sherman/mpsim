@@ -5,8 +5,9 @@ import json
 def parse_packets(fname):
     with open(sys.argv[1], 'r') as f:
         getKVP = lambda line: [p.split("=") for p in line.split()[-1].split(",")] + [("time", line.split()[1])]
-        parseRow = lambda line: {k: float(v) if k == "time" else int(v) for k, v in getKVP(line) if k != "type"}
+        parseRow = lambda line: {k: float(v) if k == "time" else float(v) for k, v in getKVP(line) if k != "type"}
         packets = map(parseRow, f.readlines())
+    print(len(packets))
     for packet in packets:
         packet["delivery_time"] = max([p["time"] for p in packets if p["seq"] <= packet["seq"]])
         packet["queueing_time"] = packet["delivery_time"] - packet["time"]

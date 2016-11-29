@@ -29,11 +29,11 @@ public:
 
 class CWNDScheduler : public MPScheduler {
 public:
-    void Init(uint numPaths, TunnelApp *tunnelApp);
+    virtual void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
     void SchedulePacket(Ptr<Packet> packet);
     void OnSend(Ptr<Packet> packet, TunHeader header);
-    void OnAck(TunHeader ackHeader);
+    virtual void OnAck(TunHeader ackHeader);
     bool PathAvailable(uint index);
     virtual void ServiceQueue();
     vector<double> cwnd;
@@ -44,7 +44,11 @@ protected:
     vector<Ptr<Packet>> m_packet_queue;
 };
 class FDBSScheduler : public CWNDScheduler {
+    void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
     void ServiceQueue();
+    void OnAck(TunHeader ackHeader);
+private:
+    vector<double> delays;
 };
 #endif

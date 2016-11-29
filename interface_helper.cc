@@ -25,7 +25,6 @@ NetDeviceContainer AddInterface(NodeContainer nc, const char* rate, const char* 
     p2p.EnablePcapAll ("socket-bound-static-routing");
     Ptr<Ipv4> ipv4Src = nc.Get(0)->GetObject<Ipv4> ();
     Ptr<Ipv4> ipv4Dst = nc.Get(1)->GetObject<Ipv4> ();
-
     int32_t interfaceSrc = ipv4Src->AddInterface(ndc.Get(0));
     ipv4Src->AddAddress(interfaceSrc, Ipv4InterfaceAddress(Ipv4Address(ip1), Ipv4Mask("255.255.255.0")));
     ipv4Src->SetMetric(interfaceSrc, 1);
