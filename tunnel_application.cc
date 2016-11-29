@@ -92,6 +92,7 @@ void TunnelApp::TunSendIfe(Ptr<Packet> packet, uint interface) {
     packet->RemoveHeader(tunHeader);
     tunHeader.path = interface;
     tunHeader.path_seq = m_path_ack[interface]++;
+    tunHeader.send_time = Simulator::Now().GetSeconds();
     packet->AddHeader(tunHeader);
     m_scheduler->OnSend(packet, tunHeader);
     m_sockets[interface]->Send(packet);

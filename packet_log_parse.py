@@ -17,6 +17,8 @@ def reorder_buffer_needed(buffer_time, packets):
     return sum([packet["size"] for packet in packets if packet["queueing_time"] > buffer_time])
 def missed_deadlines(buffer_time, packets):
     return sum([1.0 / len(packets) for packet in packets if packet["queueing_time"] > buffer_time])
+def data_rate(packets):
+    return sum([packet["size"] for packet in packets]) / (max([packet["time"] for packet in packets]) - min([packet["time"] for packet in packets]))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -26,6 +28,8 @@ if __name__ == "__main__":
     #print(json.dumps(packets, indent=2))
     times = [t / 10.0 for t in range(0, 11)]
     print("Reorder buffer needed: ")
-    print("\n".join(map(str, [(latency, reorder_buffer_needed(latency, packets)) for latency in times])))
+    print("\n".join([str((latency, reorder_buffer_needed(latency, packets)))[1:-1] for latency in times]))
     print("Missed deadlines: ")
-    print("\n".join(map(str, [(latency, missed_deadlines(latency, packets)) for latency in times])))
+    print("\n".join([str((latency, missed_deadlines(latency, packets)))[1:-1] for latency in times]))
+    print("Data rate:")
+    print(data_rate(packets) * 8.0 / (1024 ** 2))

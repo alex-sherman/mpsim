@@ -10,12 +10,23 @@ void CWNDScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
         unack.push_back(vector<UnackPacket>());
     }
 }
+bool CWNDScheduler::PathAvailable(uint index) {
+    return UnackSize(index) + 1368 < cwnd[index];
+}
+
 bool CWNDScheduler::TrySendPacket(Ptr<Packet> packet) {
+    int delays[] = {400, 500};
+    int minDelay = -1;
+    int path = -1;
     for(uint i = 0; i < cwnd.size(); i++) {
-        if(UnackSize(i) + packet->GetSize() < cwnd[i]) {
-            tunnelApp->TunSendIfe(packet, i);
-            return true;
+        if(PathAvailable(i) && (minDelay == -1 || delays[i] < minDelay)) {
+            path = i;
+            minDelay = delays[i];
         }
+    }
+    if(path != -1) {
+        tunnelApp->TunSendIfe(packet, path);
+        return true;
     }
     return false;
 }
@@ -43,10 +54,13 @@ void CWNDScheduler::OnAck(TunHeader ackHeader) {
     }
     else
         cwnd[ackHeader.path] += size * size / cwnd[ackHeader.path];
+    ServiceQueue();
+    //NS_LOG_UNCOND("Path: " << (int)ackHeader.path << " cwnd: " << cwnd[ackHeader.path] << " unack: " << UnackSize(ackHeader.path));
+}
+void CWNDScheduler::ServiceQueue() {
     // Attempt to send any queued packets
     while(m_packet_queue.size() > 0 && TrySendPacket(m_packet_queue[0]))
         m_packet_queue.erase(m_packet_queue.begin());
-    //NS_LOG_UNCOND("Path: " << (int)ackHeader.path << " cwnd: " << cwnd[ackHeader.path] << " unack: " << UnackSize(ackHeader.path));
 }
 void CWNDScheduler::OnSend(Ptr<Packet> packet, TunHeader header) {
     //NS_LOG_UNCOND(Simulator::Now ().GetSeconds () << "Send on " << header << " what " << unack[header.path].size());
@@ -58,4 +72,31 @@ uint CWNDScheduler::UnackSize(uint path) {
         size += p.size;
     }
     return size;
+}
+
+bool FDBSScheduler::TrySendPacket(Ptr<Packet> packet) {
+    return CWNDScheduler::TrySendPacket(packet);
+}
+
+void FDBSScheduler::ServiceQueue() {
+    NS_LOG_UNCOND("queue size: " << m_packet_queue.size());
+    double delays[] = {0.012, 0.012};
+    double bws[] = {9.6,19.2};
+    while(m_packet_queue.size() > 0) {
+        uint i = 0;
+        for(; i < cwnd.size(); i++) {
+            if(PathAvailable(i))
+                break;
+        }
+        if(i == cwnd.size())
+            return;
+        uint qi = fmin(m_packet_queue.size() - 1, (delays[i] - delays[0]) * bws[i]);
+        if(qi == m_packet_queue.size() - 1)
+            NS_LOG_UNCOND("Queue not full enough");
+        TunHeader tunHeader;
+        m_packet_queue[qi]->PeekHeader(tunHeader);
+        NS_LOG_UNCOND("Sending "<<tunHeader<< " "<<qi);
+        tunnelApp->TunSendIfe(m_packet_queue[qi], i);
+        m_packet_queue.erase(m_packet_queue.begin() + qi);
+    }
 }

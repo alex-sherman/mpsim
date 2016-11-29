@@ -29,6 +29,7 @@ public:
   uint8_t path;
   uint32_t seq;
   uint32_t path_seq;
+  float send_time;
 };
 
 #endif

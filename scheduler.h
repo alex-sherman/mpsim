@@ -34,11 +34,17 @@ public:
     void SchedulePacket(Ptr<Packet> packet);
     void OnSend(Ptr<Packet> packet, TunHeader header);
     void OnAck(TunHeader ackHeader);
+    bool PathAvailable(uint index);
+    virtual void ServiceQueue();
     vector<double> cwnd;
     vector<vector<UnackPacket>> unack;
-private:
-    TunnelApp *tunnelApp;
+protected:
     uint UnackSize(uint path);
+    TunnelApp *tunnelApp;
     vector<Ptr<Packet>> m_packet_queue;
+};
+class FDBSScheduler : public CWNDScheduler {
+    bool TrySendPacket(Ptr<Packet> packet);
+    void ServiceQueue();
 };
 #endif
