@@ -44,8 +44,10 @@ TypeId TunnelApp::GetTypeId (void)
 }
 
 void
-TunnelApp::Setup (MPScheduler *scheduler, Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address)
+TunnelApp::Setup (MPScheduler *scheduler, Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address, bool log_packets)
 {
+    stream.open("packet_log");
+    m_log_packets = log_packets;
     m_seq = 1;
     m_scheduler = scheduler;
     m_node = node;
@@ -109,6 +111,8 @@ void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
     TunHeader tunHeader;
     packet->RemoveHeader(tunHeader);
     if(tunHeader.type == TunType::data) {
+        if(m_log_packets)
+            stream << "Packet: " << Simulator::Now().GetSeconds() << " " << tunHeader << ",size=" << packet->GetSize() << "\n";
         m_tun_device->Receive(packet, 0x0800, m_tun_device->GetAddress (), m_tun_device->GetAddress (), NetDevice::PACKET_HOST);
         Ptr<Packet> ackPacket = Create<Packet>();
         TunHeader ackHeader;

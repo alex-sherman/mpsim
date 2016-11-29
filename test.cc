@@ -51,8 +51,8 @@ int main (int argc, char *argv[])
     InternetStackHelper internet;
     internet.Install (nSrcDst);
 
-    NetDeviceContainer i1 = AddInterface(nSrcDst, "1Mbps", "5ms");
-    NetDeviceContainer i2 = AddInterface(nSrcDst, "2Mbps", "5ms");
+    NetDeviceContainer i1 = AddInterface(nSrcDst, ".1Mbps", "500ms");
+    NetDeviceContainer i2 = AddInterface(nSrcDst, ".2Mbps", "500ms");
 
     MPScheduler *scheduler1 = new CWNDScheduler();
     Ptr<TunnelApp> app = CreateObject<TunnelApp> ();
@@ -62,8 +62,8 @@ int main (int argc, char *argv[])
     app->SetStopTime (Seconds (20.));
 
     MPScheduler *scheduler2 = new CWNDScheduler();
-    Ptr<TunnelApp> app2 = CreateObject<TunnelApp> ();
-    app2->Setup(scheduler2, nDst, Ipv4Address("172.1.1.2"), Ipv4Address("10.1.1.1"));
+    Ptr<TunnelApp> app2 = CreateObject<TunnelApp>();
+    app2->Setup(scheduler2, nDst, Ipv4Address("172.1.1.2"), Ipv4Address("10.1.1.1"), true);
     nDst->AddApplication (app2);
     app2->SetStartTime (Seconds (1.));
     app2->SetStopTime (Seconds (20.));
@@ -81,7 +81,7 @@ int main (int argc, char *argv[])
     clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
-    clientHelper.SetConstantRate(DataRate("4Mbps"), 1300);
+    clientHelper.SetConstantRate(DataRate("1Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
     clientApp.Stop (Seconds (8.0));

@@ -25,7 +25,7 @@ public:
    * \return The TypeId.
    */
   static TypeId GetTypeId (void);
-  void Setup (MPScheduler *scheduler, Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address);
+  void Setup (MPScheduler *scheduler, Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address, bool log_packets = false);
   bool OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto);
   void TunSendIfe(Ptr<Packet> packet, uint interface);
   void OnPacketRecv(Ptr<Socket> socket);
@@ -34,6 +34,8 @@ private:
   virtual void StartApplication (void);
   virtual void StopApplication (void);
 
+  std::ofstream   stream;
+  bool            m_log_packets;
   uint32_t        m_seq;
   MPScheduler *   m_scheduler;
   Ptr<Node>       m_node;

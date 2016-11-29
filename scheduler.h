@@ -41,5 +41,4 @@ private:
     uint UnackSize(uint path);
     vector<Ptr<Packet>> m_packet_queue;
 };
-
 #endif
