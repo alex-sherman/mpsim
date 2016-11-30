@@ -4,6 +4,7 @@
 #include "ns3/ptr.h"
 #include "ns3/packet.h"
 #include "ns3/header.h"
+#include "ns3/core-module.h"
 #include "tunnel_header.h"
 #include "tunnel_application.h"
 #include <vector>
@@ -43,6 +44,7 @@ protected:
     TunnelApp *tunnelApp;
     vector<Ptr<Packet>> m_packet_queue;
 };
+
 class FDBSScheduler : public CWNDScheduler {
     void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
@@ -51,4 +53,22 @@ class FDBSScheduler : public CWNDScheduler {
 private:
     vector<double> delays;
 };
+
+class EDPFScheduler : public MPScheduler {
+ private:
+    TunnelApp *tunnelApp;
+    vector<DataRate> bandwidths;
+    vector<double> delay;
+    vector<Time> available;
+
+ public:
+    void Init(uint numPaths, TunnelApp *tunnelApp);
+    void SchedulePacket(Ptr<Packet> packet);
+    void OnSend(Ptr<Packet> packet, TunHeader header);
+    void OnAck(TunHeader ackHeader);
+
+ private:
+    double arrival_time(double packet_arrival, int path, int packet_size);
+};
+
 #endif

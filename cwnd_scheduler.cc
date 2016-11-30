@@ -10,6 +10,7 @@ void CWNDScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
         unack.push_back(vector<UnackPacket>());
     }
 }
+
 bool CWNDScheduler::PathAvailable(uint index) {
     return UnackSize(index) + 1368 < cwnd[index];
 }
@@ -30,12 +31,16 @@ bool CWNDScheduler::TrySendPacket(Ptr<Packet> packet) {
     }
     return false;
 }
+
+
 void CWNDScheduler::SchedulePacket(Ptr<Packet> packet) {
     if(m_packet_queue.size() > 0 || !TrySendPacket(packet)) {
         // If no interface can be found with capacity, queue the packet
         m_packet_queue.push_back(packet);
     }
 }
+
+
 void CWNDScheduler::OnAck(TunHeader ackHeader) {
     bool loss = false;
     uint size = 0;
@@ -62,10 +67,13 @@ void CWNDScheduler::ServiceQueue() {
     while(m_packet_queue.size() > 0 && TrySendPacket(m_packet_queue[0]))
         m_packet_queue.erase(m_packet_queue.begin());
 }
+
+
 void CWNDScheduler::OnSend(Ptr<Packet> packet, TunHeader header) {
     //NS_LOG_UNCOND(Simulator::Now ().GetSeconds () << "Send on " << header << " what " << unack[header.path].size());
     unack[header.path].push_back(UnackPacket(header.path_seq, packet->GetSize()));
 }
+
 uint CWNDScheduler::UnackSize(uint path) {
     uint size = 0;
     for(UnackPacket p : unack[path]) {

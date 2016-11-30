@@ -56,6 +56,16 @@ TunnelApp::Setup (MPScheduler *scheduler, Ptr<Node> node, Ipv4Address tun_addres
     m_packetSize = 1000;
     m_nPackets = 10;
     m_dataRate = DataRate("100Mbps");
+
+    // NS_LOG_UNCOND("***TunnelApp Setup***");
+    // NS_LOG_UNCOND("n_devices = " << m_node->GetNDevices());
+
+    // for(uint32_t i = 0; i < m_node->GetNDevices(); i++) {
+    //     NS_LOG_UNCOND("Node " << i <<":  " << m_node->GetDevice(i)->GetAddress());
+    // }
+
+    // NS_LOG_UNCOND("***END***");
+
 }
 
 void
