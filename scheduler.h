@@ -15,10 +15,15 @@ using namespace std;
 class TunnelApp;
 class MPScheduler {
 public:
+    MPScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
+        rates(rates), delays(delays), tx_queues(queues) { }
     virtual void Init(uint numPaths, TunnelApp *tunnelApp) = 0;
     virtual void SchedulePacket(Ptr<Packet> packet) = 0;
     virtual void OnSend(Ptr<Packet> packet, TunHeader header) = 0;
     virtual void OnAck(TunHeader ackHeader) = 0;
+    vector<DataRate> rates;
+    vector<double> delays;
+    vector<Ptr<Queue>> tx_queues;
 };
 
 class UnackPacket {
@@ -30,6 +35,8 @@ public:
 
 class CWNDScheduler : public MPScheduler {
 public:
+    CWNDScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
+        MPScheduler(rates, delays, queues) { }
     virtual void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
     void SchedulePacket(Ptr<Packet> packet);
@@ -46,24 +53,23 @@ protected:
 };
 
 class FDBSScheduler : public CWNDScheduler {
+public:
+    FDBSScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
+        CWNDScheduler(rates, delays, queues) { }
     void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
     void ServiceQueue();
     void OnAck(TunHeader ackHeader);
-private:
-    vector<double> delays;
 };
 
 class EDPFScheduler : public MPScheduler {
  private:
     TunnelApp *tunnelApp;
-    vector<DataRate> bandwidths;
-    vector<double> delay;
     /* vector<Time> available; */
-    vector<Ptr<Queue>> tx_queues;
 
  public:
-    EDPFScheduler(vector<Ptr<Queue>> queues);
+    EDPFScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
+        MPScheduler(rates, delays, queues) { }
     void Init(uint numPaths, TunnelApp *tunnelApp);
     void SchedulePacket(Ptr<Packet> packet);
     void OnSend(Ptr<Packet> packet, TunHeader header);

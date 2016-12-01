@@ -6,7 +6,7 @@
 void CWNDScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
     this->tunnelApp = tunnelApp;
     for(uint i = 0; i < numPaths; i++) {
-        cwnd.push_back(3000);
+        cwnd.push_back(fmax(3000, rates[i].GetBitRate() / 8 * delays[i] * 2));
         unack.push_back(vector<UnackPacket>());
     }
 }
@@ -26,6 +26,7 @@ bool CWNDScheduler::TrySendPacket(Ptr<Packet> packet) {
         }
     }
     if(path != -1) {
+        //NS_LOG_UNCOND("Queue: " << tx_queues[path]->GetNBytes() << " " << path);
         tunnelApp->TunSendIfe(packet, path);
         return true;
     }
@@ -54,8 +55,8 @@ void CWNDScheduler::OnAck(TunHeader ackHeader) {
         unack[ackHeader.path].erase(unack[ackHeader.path].begin());
     }
     if(loss) {
-        cwnd[ackHeader.path] = fmax(3000, cwnd[ackHeader.path] / 2);
-        NS_LOG_UNCOND("LOSS");
+        cwnd[ackHeader.path] = fmax(3000, cwnd[ackHeader.path] * 0.5);
+        NS_LOG_UNCOND("LOSS " << (int)ackHeader.path);
     }
     else
         cwnd[ackHeader.path] += size * size / cwnd[ackHeader.path];

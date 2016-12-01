@@ -17,12 +17,10 @@ uint vectorMin(vector<double> delays) {
 
 void FDBSScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
     CWNDScheduler::Init(numPaths, tunnelApp);
-    for(uint i = 0; i < numPaths; i++) {
-        delays.push_back(0);
-    }
 }
 
 void FDBSScheduler::OnAck(TunHeader ack) {
+
     delays[ack.path] = ack.time;
     CWNDScheduler::OnAck(ack);
 }
@@ -33,8 +31,7 @@ bool FDBSScheduler::TrySendPacket(Ptr<Packet> packet) {
 
 void FDBSScheduler::ServiceQueue() {
     uint pi = vectorMin(delays);
-    double bws[] = {96,192,192};
-    double bw = bws[pi];
+    double bw = rates[pi].GetBitRate() / (1300 * 8);
     double minDelay = delays[pi];
     while(m_packet_queue.size() > 0) {
         uint i = 0;

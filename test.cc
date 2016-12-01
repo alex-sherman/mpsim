@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <cassert>
+#include <tuple>
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -51,33 +52,37 @@ int main (int argc, char *argv[])
     InternetStackHelper internet;
     internet.Install (nSrcDst);
 
-    NetDeviceContainer i1 = AddInterface(nSrcDst, "1Mbps", "2.5ms");
-    NetDeviceContainer i2 = AddInterface(nSrcDst, "2Mbps", "5.0ms");
-    NetDeviceContainer i3 = AddInterface(nSrcDst, "2Mbps", "15.0ms");
-    
-    vector<Ptr<Queue>> queues = vector<Ptr<Queue>>();
-    PointerValue ptr;
-    i1.Get(0)->GetAttribute ("TxQueue", ptr);
-    queues.push_back(ptr.Get<Queue> ());
-    i2.Get(0)->GetAttribute ("TxQueue", ptr);
-    queues.push_back(ptr.Get<Queue> ());
-    i3.Get(0)->GetAttribute ("TxQueue", ptr);
-    queues.push_back(ptr.Get<Queue> ());
+    vector<tuple<const char*, const char*>> interfaces;
+    interfaces.push_back(make_tuple("1Mbps", "2.5ms"));
+    interfaces.push_back(make_tuple("2Mbps", "5ms"));
+    interfaces.push_back(make_tuple("2Mbps", "150ms"));
 
-    MPScheduler *scheduler1 = new EDPFScheduler(queues);
+    vector<Ptr<Queue>> queues;
+    vector<DataRate> rates;
+    vector<double> delays;
+
+    for(auto interface : interfaces) {
+        NetDeviceContainer ndc = AddInterface(nSrcDst, get<0>(interface), get<1>(interface));
+        PointerValue ptr;
+        ndc.Get(0)->GetAttribute ("TxQueue", ptr);
+        queues.push_back(ptr.Get<Queue>());
+        rates.push_back(DataRate(get<0>(interface)));
+        delays.push_back(Time(get<1>(interface)).GetSeconds());
+    }
+    MPScheduler *scheduler1 = new FDBSScheduler(rates, delays, queues);
     Ptr<TunnelApp> app = CreateObject<TunnelApp> ();
     app->Setup(scheduler1, nSrc, Ipv4Address("172.1.1.1"), Ipv4Address("10.1.1.2"));
     nSrc->AddApplication (app);
     app->SetStartTime (Seconds (1.));
-    app->SetStopTime (Seconds (20.));
+    app->SetStopTime (Seconds (30.));
 
 
-    MPScheduler *scheduler2 = new FDBSScheduler();
+    MPScheduler *scheduler2 = new FDBSScheduler(rates, delays, queues);
     Ptr<TunnelApp> app2 = CreateObject<TunnelApp>();
     app2->Setup(scheduler2, nDst, Ipv4Address("172.1.1.2"), Ipv4Address("10.1.1.1"), true);
     nDst->AddApplication (app2);
     app2->SetStartTime (Seconds (1.));
-    app2->SetStopTime (Seconds (20.));
+    app2->SetStopTime (Seconds (30.));
 
     // Create TCP server sink
     uint16_t port = 50000;
@@ -85,7 +90,7 @@ int main (int argc, char *argv[])
     PacketSinkHelper sinkHelper ("ns3::UdpSocketFactory", sinkLocalAddress);
     ApplicationContainer sinkApp = sinkHelper.Install (nDst);
     sinkApp.Start (Seconds (1.0));
-    sinkApp.Stop (Seconds (20.0));
+    sinkApp.Stop (Seconds (30.0));
 
     // Create TCP sender
     OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
@@ -95,7 +100,7 @@ int main (int argc, char *argv[])
     clientHelper.SetConstantRate(DataRate("5Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
-    clientApp.Stop (Seconds (20.0));
+    clientApp.Stop (Seconds (11.0));
 
 
     LogComponentEnableAll (LOG_PREFIX_TIME);
