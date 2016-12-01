@@ -112,6 +112,7 @@ bool TunnelApp::OnTunSend(Ptr<Packet> packet, const Address &src, const Address 
     TunHeader tunHeader;
     tunHeader.type = TunType::data;
     tunHeader.seq = m_seq++;
+    tunHeader.arrival_time = Simulator::Now().GetSeconds();
     packet->AddHeader(tunHeader);
     m_scheduler->SchedulePacket(packet);
     return true;

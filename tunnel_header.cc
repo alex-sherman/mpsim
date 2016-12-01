@@ -30,12 +30,12 @@ TunHeader::Print (std::ostream &os) const
   // This method is invoked by the packet printing
   // routines to print the content of my header.
   //os << "data=" << m_data << std::endl;
-  os << "type=" << type << ",path=" << (int)path << ",seq=" << seq << ",path_seq=" << path_seq << ",send_time=" << time;
+  os << "type=" << type << ",path=" << (int)path << ",seq=" << seq << ",path_seq=" << path_seq << ",send_time=" << time << ",arrival_time=" << arrival_time;
 }
 uint32_t
 TunHeader::GetSerializedSize (void) const
 {
-  return 14;
+  return 18;
 }
 void
 TunHeader::Serialize (Buffer::Iterator start) const
@@ -47,6 +47,7 @@ TunHeader::Serialize (Buffer::Iterator start) const
   start.WriteHtonU32(seq);
   start.WriteHtonU32(path_seq);
   start.WriteHtonU32(time * 100000);
+  start.WriteHtonU32(arrival_time * 100000);
 }
 uint32_t
 TunHeader::Deserialize (Buffer::Iterator start)
@@ -59,6 +60,7 @@ TunHeader::Deserialize (Buffer::Iterator start)
   seq = start.ReadNtohU32();
   path_seq = start.ReadNtohU32();
   time = start.ReadNtohU32() / 100000.0;
+  arrival_time = start.ReadNtohU32() / 100000.0;
 
-  return 14;
+  return 18;
 }

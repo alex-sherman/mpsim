@@ -14,9 +14,11 @@ def parse_packets(fname):
     return packets
 
 
+def end_to_end_latency(time, packets):
+    return sum([1.0 / len(packets) for packet in packets if packet["time"] - packet["arrival_time"] > time])
 def reorder_buffer_needed(buffer_time, packets):
     return sum([packet["size"] for packet in packets if packet["queueing_time"] > buffer_time])
-def missed_deadlines(buffer_time, packets):
+def induced_jitter(buffer_time, packets):
     return sum([1.0 / len(packets) for packet in packets if packet["queueing_time"] > buffer_time])
 def data_rate(packets):
     return sum([packet["size"] for packet in packets]) / (max([packet["time"] for packet in packets]) - min([packet["time"] for packet in packets]))
@@ -26,11 +28,13 @@ if __name__ == "__main__":
         print("Usage: packet_log_parse.py <packet_log>")
         exit(0)
     packets = parse_packets(sys.argv[1])
-    #print(json.dumps(packets, indent=2))
-    times = [t / 10.0 for t in range(0, 11)]
+    #print(json.dumps([p for p in packets if p["queueing_time"] > 0.08], indent=2))
+    times = [t / 100.0 for t in range(0, 11)]
     print("Reorder buffer needed: ")
     print("\n".join([str((latency, reorder_buffer_needed(latency, packets)))[1:-1] for latency in times]))
-    print("Missed deadlines: ")
-    print("\n".join([str((latency, missed_deadlines(latency, packets)))[1:-1] for latency in times]))
+    print("Jitter induced: ")
+    print("\n".join([str((latency, induced_jitter(latency, packets)))[1:-1] for latency in times]))
+    print("Deadlines missed: ")
+    print("\n".join([str((latency, end_to_end_latency(latency, packets)))[1:-1] for latency in [t / 10.0 for t in range(0, 11)]]))
     print("Data rate:")
     print(data_rate(packets) * 8.0 / (1024 ** 2))
