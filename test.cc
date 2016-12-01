@@ -51,14 +51,17 @@ int main (int argc, char *argv[])
     InternetStackHelper internet;
     internet.Install (nSrcDst);
 
-    NetDeviceContainer i1 = AddInterface(nSrcDst, ".1Mbps", "500ms");
-    NetDeviceContainer i2 = AddInterface(nSrcDst, ".2Mbps", "500ms");
+    NetDeviceContainer i1 = AddInterface(nSrcDst, "1Mbps", "2.5ms");
+    NetDeviceContainer i2 = AddInterface(nSrcDst, "2Mbps", "5.0ms");
+    NetDeviceContainer i3 = AddInterface(nSrcDst, "2Mbps", "15.0ms");
     
     vector<Ptr<Queue>> queues = vector<Ptr<Queue>>();
     PointerValue ptr;
     i1.Get(0)->GetAttribute ("TxQueue", ptr);
     queues.push_back(ptr.Get<Queue> ());
     i2.Get(0)->GetAttribute ("TxQueue", ptr);
+    queues.push_back(ptr.Get<Queue> ());
+    i3.Get(0)->GetAttribute ("TxQueue", ptr);
     queues.push_back(ptr.Get<Queue> ());
 
     MPScheduler *scheduler1 = new EDPFScheduler(queues);
@@ -68,7 +71,8 @@ int main (int argc, char *argv[])
     app->SetStartTime (Seconds (1.));
     app->SetStopTime (Seconds (20.));
 
-    MPScheduler *scheduler2 = new EDPFScheduler(queues);
+
+    MPScheduler *scheduler2 = new FDBSScheduler();
     Ptr<TunnelApp> app2 = CreateObject<TunnelApp>();
     app2->Setup(scheduler2, nDst, Ipv4Address("172.1.1.2"), Ipv4Address("10.1.1.1"), true);
     nDst->AddApplication (app2);
@@ -81,17 +85,17 @@ int main (int argc, char *argv[])
     PacketSinkHelper sinkHelper ("ns3::UdpSocketFactory", sinkLocalAddress);
     ApplicationContainer sinkApp = sinkHelper.Install (nDst);
     sinkApp.Start (Seconds (1.0));
-    sinkApp.Stop (Seconds (10.0));
+    sinkApp.Stop (Seconds (20.0));
 
     // Create TCP sender
     OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
     clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
-    clientHelper.SetConstantRate(DataRate("1Mbps"), 1300);
+    clientHelper.SetConstantRate(DataRate("5Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
-    clientApp.Stop (Seconds (8.0));
+    clientApp.Stop (Seconds (20.0));
 
 
     LogComponentEnableAll (LOG_PREFIX_TIME);
