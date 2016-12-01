@@ -53,15 +53,22 @@ int main (int argc, char *argv[])
 
     NetDeviceContainer i1 = AddInterface(nSrcDst, ".1Mbps", "500ms");
     NetDeviceContainer i2 = AddInterface(nSrcDst, ".2Mbps", "500ms");
+    
+    vector<Ptr<Queue>> queues = vector<Ptr<Queue>>();
+    PointerValue ptr;
+    i1.Get(0)->GetAttribute ("TxQueue", ptr);
+    queues.push_back(ptr.Get<Queue> ());
+    i2.Get(0)->GetAttribute ("TxQueue", ptr);
+    queues.push_back(ptr.Get<Queue> ());
 
-    MPScheduler *scheduler1 = new CWNDScheduler();
+    MPScheduler *scheduler1 = new EDPFScheduler(queues);
     Ptr<TunnelApp> app = CreateObject<TunnelApp> ();
     app->Setup(scheduler1, nSrc, Ipv4Address("172.1.1.1"), Ipv4Address("10.1.1.2"));
     nSrc->AddApplication (app);
     app->SetStartTime (Seconds (1.));
     app->SetStopTime (Seconds (20.));
 
-    MPScheduler *scheduler2 = new CWNDScheduler();
+    MPScheduler *scheduler2 = new EDPFScheduler(queues);
     Ptr<TunnelApp> app2 = CreateObject<TunnelApp>();
     app2->Setup(scheduler2, nDst, Ipv4Address("172.1.1.2"), Ipv4Address("10.1.1.1"), true);
     nDst->AddApplication (app2);

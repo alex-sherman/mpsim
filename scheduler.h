@@ -59,9 +59,11 @@ class EDPFScheduler : public MPScheduler {
     TunnelApp *tunnelApp;
     vector<DataRate> bandwidths;
     vector<double> delay;
-    vector<Time> available;
+    /* vector<Time> available; */
+    vector<Ptr<Queue>> tx_queues;
 
  public:
+    EDPFScheduler(vector<Ptr<Queue>> queues);
     void Init(uint numPaths, TunnelApp *tunnelApp);
     void SchedulePacket(Ptr<Packet> packet);
     void OnSend(Ptr<Packet> packet, TunHeader header);
@@ -69,6 +71,8 @@ class EDPFScheduler : public MPScheduler {
 
  private:
     double arrival_time(double packet_arrival, int path, int packet_size);
+    int TrySendPacket(Ptr<Packet> packet);
+    Time next_available(int link);
 };
 
 #endif
