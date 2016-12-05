@@ -32,12 +32,10 @@ if __name__ == "__main__":
     #print(json.dumps([p for p in packets if p["queueing_time"] > 0.08], indent=2))
     times = [t / 100.0 for t in range(0, 101)]
     text = ""
-    text += str("Reorder buffer needed: \n")
-    text += str("\n".join([str((latency, reorder_buffer_needed(latency, packets)))[1:-1] for latency in times]))
-    text += str("\nJitter induced: \n")
-    text += str("\n".join([str((latency, induced_jitter(latency, packets)))[1:-1] for latency in times]))
-    text += str("\nDeadlines missed: \n")
-    text += str("\n".join([str((latency, end_to_end_latency(latency, packets)))[1:-1] for latency in [t / 10.0 for t in range(0, 11)]]))
+    text += str("Reorder buffer needed, jitter induced, deadlines missed \n")
+    text += str("\n".join([str(
+        (latency, reorder_buffer_needed(latency, packets), induced_jitter(latency, packets), end_to_end_latency(latency, packets)))[1:-1]
+         for latency in times]))
     text += str("\nData rate:\n")
     text += str(data_rate(packets) * 8.0 / (1024 ** 2))
     with open(sys.argv[1] + ".csv", 'w') as f:

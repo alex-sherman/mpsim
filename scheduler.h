@@ -46,6 +46,7 @@ public:
     virtual void ServiceQueue();
     vector<double> cwnd;
     vector<vector<UnackPacket>> unack;
+    uint MinDelay();
 protected:
     uint UnackSize(uint path);
     TunnelApp *tunnelApp;
@@ -59,7 +60,6 @@ public:
     void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
     void ServiceQueue();
-    void OnAck(TunHeader ackHeader);
 };
 
 class EDPFScheduler : public MPScheduler {

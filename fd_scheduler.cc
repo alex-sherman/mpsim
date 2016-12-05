@@ -3,26 +3,8 @@
 
 #include "ns3/core-module.h"
 
-uint vectorMin(vector<double> delays) {
-    double m = delays[0];
-    uint io = 0;
-    for(uint i = 0; i < delays.size(); i++) {
-        if(m > delays[i]) {
-            m = delays[i];
-            io = i;
-        }
-    }
-    return io;
-}
-
 void FDBSScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
     CWNDScheduler::Init(numPaths, tunnelApp);
-}
-
-void FDBSScheduler::OnAck(TunHeader ack) {
-
-    delays[ack.path] = ack.time;
-    CWNDScheduler::OnAck(ack);
 }
 
 bool FDBSScheduler::TrySendPacket(Ptr<Packet> packet) {
@@ -30,7 +12,7 @@ bool FDBSScheduler::TrySendPacket(Ptr<Packet> packet) {
 }
 
 void FDBSScheduler::ServiceQueue() {
-    uint pi = vectorMin(delays);
+    uint pi = MinDelay();
     double bw = rates[pi].GetBitRate() / (1300 * 8);
     double minDelay = delays[pi];
     while(m_packet_queue.size() > 0) {

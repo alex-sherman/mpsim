@@ -11,12 +11,23 @@ void CWNDScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
     }
 }
 
+uint CWNDScheduler::MinDelay() {
+    double m = delays[0];
+    uint io = 0;
+    for(uint i = 0; i < delays.size(); i++) {
+        if(m > delays[i]) {
+            m = delays[i];
+            io = i;
+        }
+    }
+    return io;
+}
+
 bool CWNDScheduler::PathAvailable(uint index) {
     return UnackSize(index) + 1368 < cwnd[index];
 }
 
 bool CWNDScheduler::TrySendPacket(Ptr<Packet> packet) {
-    int delays[] = {400, 500};
     int minDelay = -1;
     int path = -1;
     for(uint i = 0; i < cwnd.size(); i++) {
@@ -43,6 +54,8 @@ void CWNDScheduler::SchedulePacket(Ptr<Packet> packet) {
 
 
 void CWNDScheduler::OnAck(TunHeader ackHeader) {
+
+    delays[ackHeader.path] = ackHeader.time;
     bool loss = false;
     uint size = 0;
     while(unack[ackHeader.path].size() > 0 && unack[ackHeader.path][0].path_seq <= ackHeader.path_seq) {
