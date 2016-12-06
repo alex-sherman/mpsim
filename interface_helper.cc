@@ -15,10 +15,12 @@
 using namespace ns3;
 
 
-PointToPointHelper p2p;
 uint mac_i = 0;
 NetDeviceContainer AddInterface(NodeContainer nc, const char* rate, const char* delay, const char* ip1, const char* ip2) {
     
+    PointToPointHelper p2p;
+    p2p.SetQueue ("ns3::DropTailQueue", 
+              "MaxPackets", UintegerValue (DataRate(rate).GetBitRate() * Time(delay).GetSeconds() / 1300));
     p2p.SetDeviceAttribute ("DataRate", StringValue (rate));
     p2p.SetChannelAttribute ("Delay", StringValue (delay));
     NetDeviceContainer ndc = p2p.Install (nc);
