@@ -1,11 +1,6 @@
 #include "scheduler.h"
 #include <algorithm>
 
-void EDPFScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
-    this->tunnelApp = tunnelApp;
-}
-
-
 void EDPFScheduler::SchedulePacket(Ptr<Packet> packet) {
     
     int path = -1;
@@ -22,25 +17,6 @@ void EDPFScheduler::SchedulePacket(Ptr<Packet> packet) {
         tunnelApp->TunSendIfe(packet, path);
     }
 }
-
-
-void EDPFScheduler::OnAck(TunHeader ackHeader) {
-    // shouldnt matter
-}
-
-void EDPFScheduler::OnSend(Ptr<Packet> packet, TunHeader header) {
-    // //update available time of link
-    // if ( Simulator::Now() > available[header.path] ) {
-    //     // currently available
-    //     available[header.path] = Simulator::Now() + bandwidths[header.path].CalculateBytesTxTime(packet->GetSize());
-    // } else {
-    //     // not yet available
-    //     available[header.path] = bandwidths[header.path].CalculateBytesTxTime(packet->GetSize());
-    // }
-
-    // NS_LOG_UNCOND("Next available:  " << available[header.path].GetSeconds() << "  @" << Simulator::Now().GetSeconds());
-}
-
 
 double EDPFScheduler::arrival_time(double packet_arrival, int path, int packet_size) {
     

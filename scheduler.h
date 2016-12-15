@@ -13,24 +13,70 @@ using namespace ns3;
 using namespace std;
 
 class TunnelApp;
+
+class UnackPacket {
+public:
+    UnackPacket(uint32_t path_seq, uint32_t size, float idle_time) : path_seq(path_seq), size(size), idle_time(idle_time) { }
+    uint32_t path_seq;
+    uint32_t size;
+    float idle_time;
+};
+
 class MPScheduler {
 public:
     MPScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
         rates(rates), delays(delays), tx_queues(queues) { }
-    virtual void Init(uint numPaths, TunnelApp *tunnelApp) = 0;
+    virtual void Init(uint numPaths, TunnelApp *tunnelApp) {
+        this->tunnelApp = tunnelApp;
+        for(uint i = 0; i < numPaths; i++) {
+            unack.push_back(vector<UnackPacket>());
+            path_send_times.push_back(0);
+            path_recv_times.push_back(0);
+        }
+    }
     virtual void SchedulePacket(Ptr<Packet> packet) = 0;
-    virtual void OnSend(Ptr<Packet> packet, TunHeader header) = 0;
-    virtual void OnAck(TunHeader ackHeader) = 0;
+    virtual void OnSend(Ptr<Packet> packet, TunHeader &header) {
+        double now = Simulator::Now().GetSeconds();
+        double idle_time = now - path_send_times[header.path];
+        header.queueing_time = idle_time;
+        unack[header.path].push_back(UnackPacket(header.path_seq, packet->GetSize(), idle_time));
+        path_send_times[header.path] = now;
+    }
+    virtual void OnRecv(TunHeader &header) {
+        NS_LOG_UNCOND("Derp: " << header.queueing_time);
+        header.queueing_time = Simulator::Now().GetSeconds() - path_recv_times[header.path] - header.queueing_time;
+        NS_LOG_UNCOND("Herp: " << header.queueing_time);
+        path_recv_times[header.path] = Simulator::Now().GetSeconds();
+    }
+    uint UnackSize(uint path) {
+        uint size = 0;
+        for(UnackPacket p : unack[path]) {
+            size += p.size;
+        }
+        return size;
+    }
+    virtual UnackPacket OnAck(TunHeader ackHeader, bool &loss) {
+        loss = false;
+        UnackPacket unack_packet(0, 0, 0);
+        while(unack[ackHeader.path].size() > 0 && unack[ackHeader.path][0].path_seq <= ackHeader.path_seq) {
+            if(unack[ackHeader.path][0].path_seq == ackHeader.path_seq)
+                unack_packet = unack[ackHeader.path][0];
+
+            if(unack[ackHeader.path][0].path_seq != ackHeader.path_seq)
+                loss = true;
+
+            unack[ackHeader.path].erase(unack[ackHeader.path].begin());
+        }
+        return unack_packet;
+    }
+    vector<double> path_send_times;
+    vector<double> path_recv_times;
+
     vector<DataRate> rates;
     vector<double> delays;
     vector<Ptr<Queue>> tx_queues;
-};
-
-class UnackPacket {
-public:
-    UnackPacket(uint32_t path_seq, uint32_t size) : path_seq(path_seq), size(size) { }
-    uint32_t path_seq;
-    uint32_t size;
+    vector<vector<UnackPacket>> unack;
+    TunnelApp *tunnelApp;
 };
 
 class CWNDScheduler : public MPScheduler {
@@ -40,16 +86,13 @@ public:
     virtual void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
     void SchedulePacket(Ptr<Packet> packet);
-    void OnSend(Ptr<Packet> packet, TunHeader header);
-    virtual void OnAck(TunHeader ackHeader);
+    UnackPacket OnAck(TunHeader ackHeader, bool &loss);
     bool PathAvailable(uint index);
     virtual void ServiceQueue();
+    
     vector<double> cwnd;
-    vector<vector<UnackPacket>> unack;
     uint MinDelay();
 protected:
-    uint UnackSize(uint path);
-    TunnelApp *tunnelApp;
     vector<Ptr<Packet>> m_packet_queue;
 };
 
@@ -57,28 +100,30 @@ class FDBSScheduler : public CWNDScheduler {
 public:
     FDBSScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
         CWNDScheduler(rates, delays, queues) { }
-    void Init(uint numPaths, TunnelApp *tunnelApp);
     bool TrySendPacket(Ptr<Packet> packet);
     void ServiceQueue();
 };
 
 class EDPFScheduler : public MPScheduler {
- private:
-    TunnelApp *tunnelApp;
-    /* vector<Time> available; */
-
  public:
     EDPFScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
         MPScheduler(rates, delays, queues) { }
     void Init(uint numPaths, TunnelApp *tunnelApp);
     void SchedulePacket(Ptr<Packet> packet);
-    void OnSend(Ptr<Packet> packet, TunHeader header);
-    void OnAck(TunHeader ackHeader);
 
  private:
     double arrival_time(double packet_arrival, int path, int packet_size);
     int TrySendPacket(Ptr<Packet> packet);
     Time next_available(int link);
+};
+class ATScheduler : public MPScheduler {
+private:
+    vector<double> path_queuing_times;
+public:
+    ATScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
+        MPScheduler(rates, delays, queues) { }
+    void SchedulePacket(Ptr<Packet> packet);
+    UnackPacket OnAck(TunHeader ackHeader, bool &loss);
 };
 
 #endif

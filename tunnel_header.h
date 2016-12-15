@@ -30,6 +30,7 @@ public:
   uint32_t seq;
   uint32_t path_seq;
   float time;
+  float queueing_time;
   float arrival_time;
 };
 

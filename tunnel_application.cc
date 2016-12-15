@@ -103,8 +103,8 @@ void TunnelApp::TunSendIfe(Ptr<Packet> packet, uint interface) {
     tunHeader.path = interface;
     tunHeader.path_seq = m_path_ack[interface]++;
     tunHeader.time = Simulator::Now().GetSeconds();
-    packet->AddHeader(tunHeader);
     m_scheduler->OnSend(packet, tunHeader);
+    packet->AddHeader(tunHeader);
     m_sockets[interface]->Send(packet);
 }
 
@@ -126,6 +126,7 @@ void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
         if(m_log_packets)
             stream << "Packet: " << Simulator::Now().GetSeconds() << " " << tunHeader << ",size=" << packet->GetSize()
                 << ",travel_time=" << Simulator::Now().GetSeconds() - tunHeader.time << "\n";
+        m_scheduler->OnRecv(tunHeader);
         m_tun_device->Receive(packet, 0x0800, m_tun_device->GetAddress (), m_tun_device->GetAddress (), NetDevice::PACKET_HOST);
         Ptr<Packet> ackPacket = Create<Packet>();
         TunHeader ackHeader;
@@ -134,10 +135,12 @@ void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
         ackHeader.seq = tunHeader.seq;
         ackHeader.path_seq = tunHeader.path_seq;
         ackHeader.time = Simulator::Now().GetSeconds() - tunHeader.time;
+        ackHeader.queueing_time = tunHeader.queueing_time;
         ackPacket->AddHeader(ackHeader);
         socket->Send(ackPacket);
     }
     else if(tunHeader.type == TunType::ack) {
-        m_scheduler->OnAck(tunHeader);
+        bool loss;
+        m_scheduler->OnAck(tunHeader, loss);
     }
 }

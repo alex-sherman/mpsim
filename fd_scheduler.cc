@@ -3,10 +3,6 @@
 
 #include "ns3/core-module.h"
 
-void FDBSScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
-    CWNDScheduler::Init(numPaths, tunnelApp);
-}
-
 bool FDBSScheduler::TrySendPacket(Ptr<Packet> packet) {
     return CWNDScheduler::TrySendPacket(packet);
 }

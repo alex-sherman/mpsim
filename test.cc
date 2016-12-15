@@ -69,7 +69,7 @@ int main (int argc, char *argv[])
         rates.push_back(DataRate(get<0>(interface)));
         delays.push_back(Time(get<1>(interface)).GetSeconds());
     }
-    MPScheduler *scheduler1 = new FDBSScheduler(rates, delays, queues);
+    MPScheduler *scheduler1 = new ATScheduler(rates, delays, queues);
     Ptr<TunnelApp> app = CreateObject<TunnelApp> ();
     app->Setup(scheduler1, nSrc, Ipv4Address("172.1.1.1"), Ipv4Address("10.1.1.2"));
     nSrc->AddApplication (app);
@@ -77,7 +77,7 @@ int main (int argc, char *argv[])
     app->SetStopTime (Seconds (30.));
 
 
-    MPScheduler *scheduler2 = new FDBSScheduler(rates, delays, queues);
+    MPScheduler *scheduler2 = new ATScheduler(rates, delays, queues);
     Ptr<TunnelApp> app2 = CreateObject<TunnelApp>();
     app2->Setup(scheduler2, nDst, Ipv4Address("172.1.1.2"), Ipv4Address("10.1.1.1"), true);
     nDst->AddApplication (app2);
@@ -97,7 +97,7 @@ int main (int argc, char *argv[])
     clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
-    clientHelper.SetConstantRate(DataRate("5Mbps"), 1300);
+    clientHelper.SetConstantRate(DataRate("4.5Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
     clientApp.Stop (Seconds (11.0));
