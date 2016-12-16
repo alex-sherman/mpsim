@@ -136,6 +136,7 @@ void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
         ackHeader.path_seq = tunHeader.path_seq;
         ackHeader.time = Simulator::Now().GetSeconds() - tunHeader.time;
         ackHeader.queueing_time = tunHeader.queueing_time;
+        ackHeader.arrival_time = Simulator::Now().GetSeconds();
         ackPacket->AddHeader(ackHeader);
         socket->Send(ackPacket);
     }

@@ -53,9 +53,9 @@ int main (int argc, char *argv[])
     internet.Install (nSrcDst);
 
     vector<tuple<const char*, const char*>> interfaces;
-    interfaces.push_back(make_tuple("1Mbps", "2.5ms"));
-    interfaces.push_back(make_tuple("2Mbps", "5ms"));
-    interfaces.push_back(make_tuple("2Mbps", "150ms"));
+    interfaces.push_back(make_tuple("0.1Mbps", "51ms"));
+    interfaces.push_back(make_tuple("2Mbps", "50ms"));
+    interfaces.push_back(make_tuple("2.9Mbps", "150ms"));
 
     vector<Ptr<Queue>> queues;
     vector<DataRate> rates;

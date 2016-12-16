@@ -43,9 +43,7 @@ public:
         path_send_times[header.path] = now;
     }
     virtual void OnRecv(TunHeader &header) {
-        NS_LOG_UNCOND("Derp: " << header.queueing_time);
-        header.queueing_time = Simulator::Now().GetSeconds() - path_recv_times[header.path] - header.queueing_time;
-        NS_LOG_UNCOND("Herp: " << header.queueing_time);
+        header.queueing_time = Simulator::Now().GetSeconds() - path_recv_times[header.path];
         path_recv_times[header.path] = Simulator::Now().GetSeconds();
     }
     uint UnackSize(uint path) {
@@ -118,12 +116,17 @@ class EDPFScheduler : public MPScheduler {
 };
 class ATScheduler : public MPScheduler {
 private:
-    vector<double> path_queuing_times;
+    vector<double> path_queueing_times;
+    vector<double> path_arrival_times;
 public:
     ATScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
         MPScheduler(rates, delays, queues) { }
+    void Init(uint numPaths, TunnelApp *tunnelApp);
     void SchedulePacket(Ptr<Packet> packet);
     UnackPacket OnAck(TunHeader ackHeader, bool &loss);
+    float ArrivalTime(uint path);
+    float QueueTime(uint path);
+    void OnSend(Ptr<Packet> packet, TunHeader &header);
 };
 
 #endif
