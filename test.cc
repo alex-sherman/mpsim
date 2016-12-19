@@ -53,9 +53,9 @@ int main (int argc, char *argv[])
     internet.Install (nSrcDst);
 
     vector<tuple<const char*, const char*>> interfaces;
-    interfaces.push_back(make_tuple("0.1Mbps", "51ms"));
+    interfaces.push_back(make_tuple("1Mbps", "51ms"));
     interfaces.push_back(make_tuple("2Mbps", "50ms"));
-    interfaces.push_back(make_tuple("2.9Mbps", "150ms"));
+    interfaces.push_back(make_tuple("5Mbps", "150ms"));
 
     vector<Ptr<Queue>> queues;
     vector<DataRate> rates;
@@ -84,7 +84,7 @@ int main (int argc, char *argv[])
     app2->SetStartTime (Seconds (1.));
     app2->SetStopTime (Seconds (30.));
 
-    // Create TCP server sink
+    // Create UDP server sink
     uint16_t port = 50000;
     Address sinkLocalAddress (InetSocketAddress (Ipv4Address("172.1.1.2"), port));
     PacketSinkHelper sinkHelper ("ns3::UdpSocketFactory", sinkLocalAddress);
@@ -92,15 +92,34 @@ int main (int argc, char *argv[])
     sinkApp.Start (Seconds (1.0));
     sinkApp.Stop (Seconds (30.0));
 
-    // Create TCP sender
+    // Create UDP sender
     OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
     clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
-    clientHelper.SetConstantRate(DataRate("4.5Mbps"), 1300);
+    clientHelper.SetConstantRate(DataRate("3Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
-    clientApp.Stop (Seconds (11.0));
+    clientApp.Stop (Seconds (20.0));
+
+
+    // Create TCP server sink
+    uint16_t port2 = 50001;
+    Address sinkLocalAddress2 (InetSocketAddress (Ipv4Address("172.1.1.2"), port2));
+    PacketSinkHelper sinkHelper2 ("ns3::TcpSocketFactory", sinkLocalAddress2);
+    ApplicationContainer sinkApp2 = sinkHelper2.Install (nDst);
+    sinkApp2.Start (Seconds (1.0));
+    sinkApp2.Stop (Seconds (30.0));
+
+    // Create TCP sender
+    OnOffHelper clientHelper2 ("ns3::TcpSocketFactory", Address ());
+    clientHelper2.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+    clientHelper2.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+    clientHelper2.SetAttribute ("Remote", AddressValue(sinkLocalAddress2));
+    //clientHelper2.SetConstantRate(DataRate("4.5Mbps"), 1300);
+    ApplicationContainer clientApp2 = clientHelper2.Install(nSrc);
+    clientApp2.Start (Seconds (1.0));
+    clientApp2.Stop (Seconds (20.0));
 
 
     LogComponentEnableAll (LOG_PREFIX_TIME);

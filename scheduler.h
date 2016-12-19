@@ -16,10 +16,10 @@ class TunnelApp;
 
 class UnackPacket {
 public:
-    UnackPacket(uint32_t path_seq, uint32_t size, float idle_time) : path_seq(path_seq), size(size), idle_time(idle_time) { }
+    UnackPacket(uint32_t path_seq, uint32_t size, float send_time) : path_seq(path_seq), size(size), send_time(send_time) { }
     uint32_t path_seq;
     uint32_t size;
-    float idle_time;
+    float send_time;
 };
 
 class MPScheduler {
@@ -39,7 +39,7 @@ public:
         double now = Simulator::Now().GetSeconds();
         double idle_time = now - path_send_times[header.path];
         header.queueing_time = idle_time;
-        unack[header.path].push_back(UnackPacket(header.path_seq, packet->GetSize(), idle_time));
+        unack[header.path].push_back(UnackPacket(header.path_seq, packet->GetSize(), now));
         path_send_times[header.path] = now;
     }
     virtual void OnRecv(TunHeader &header) {
@@ -125,7 +125,7 @@ public:
     void SchedulePacket(Ptr<Packet> packet);
     UnackPacket OnAck(TunHeader ackHeader, bool &loss);
     float ArrivalTime(uint path);
-    float QueueTime(uint path);
+    float ArrivalTime(uint path, uint packet);
     void OnSend(Ptr<Packet> packet, TunHeader &header);
 };
 

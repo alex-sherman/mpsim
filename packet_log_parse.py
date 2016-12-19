@@ -28,7 +28,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: packet_log_parse.py <packet_log>")
         exit(0)
-    packets = parse_packets(sys.argv[1])
+    packets = parse_packets(sys.argv[1])[500:]
     #print(json.dumps([p for p in packets if p["queueing_time"] > 0.08], indent=2))
     times = [t / 100.0 for t in range(0, 101)]
     text = ""

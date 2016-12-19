@@ -118,16 +118,64 @@ bool TunnelApp::OnTunSend(Ptr<Packet> packet, const Address &src, const Address 
     return true;
 }
 
+void TunnelApp::DeliverPacket(Ptr<Packet> packet, Ptr<VirtualNetDevice> m_tun_device) {
+    TunHeader tunHeader;
+    packet->RemoveHeader(tunHeader);
+    m_last_sent_seq = tunHeader.seq + 1;
+    m_tun_device->Receive(packet, 0x0800, m_tun_device->GetAddress (), m_tun_device->GetAddress (), NetDevice::PACKET_HOST);
+}
+
+void TunnelApp::ServiceReorderBuffer() {
+    while(m_reorder_buffer.size() > 0) {
+        TunHeader header;
+        Ptr<Packet> packet = m_reorder_buffer.front();
+        packet->PeekHeader(header);
+        if(header.seq == m_last_sent_seq || Simulator::Now().GetSeconds() - header.arrival_time > reorder_latency) {
+            m_reorder_buffer.pop_front();
+            DeliverPacket(packet, m_tun_device);
+        }
+        else
+            return;
+    }
+}
+
 void TunnelApp::OnPacketRecv(Ptr<Socket> socket) {
     Ptr<Packet> packet = socket->Recv (65535, 0);
     TunHeader tunHeader;
     packet->RemoveHeader(tunHeader);
+    tunHeader.arrival_time = Simulator::Now().GetSeconds();
+    packet->AddHeader(tunHeader);
     if(tunHeader.type == TunType::data) {
         if(m_log_packets)
             stream << "Packet: " << Simulator::Now().GetSeconds() << " " << tunHeader << ",size=" << packet->GetSize()
                 << ",travel_time=" << Simulator::Now().GetSeconds() - tunHeader.time << "\n";
         m_scheduler->OnRecv(tunHeader);
-        m_tun_device->Receive(packet, 0x0800, m_tun_device->GetAddress (), m_tun_device->GetAddress (), NetDevice::PACKET_HOST);
+        if(tunHeader.seq == m_last_sent_seq)
+            DeliverPacket(packet, m_tun_device);
+        else if(tunHeader.seq > m_last_sent_seq) {
+            auto it = m_reorder_buffer.begin();
+            while (1) {
+                if(it == m_reorder_buffer.end()) {
+                    m_reorder_buffer.insert(it, packet);
+                    break;
+                }
+                TunHeader testHeader;
+                (*it)->PeekHeader(testHeader);
+                if(testHeader.seq > tunHeader.seq) {
+                    m_reorder_buffer.insert(it, packet);
+                    break;
+                }
+                it++;
+            }
+            for (auto it = m_reorder_buffer.begin(); it != m_reorder_buffer.end(); it++) {
+                TunHeader testHeader;
+                (*it)->PeekHeader(testHeader);
+            }
+        }
+        else {
+            NS_LOG_UNCOND("DROP");
+        }
+        ServiceReorderBuffer();
         Ptr<Packet> ackPacket = Create<Packet>();
         TunHeader ackHeader;
         ackHeader.type = TunType::ack;

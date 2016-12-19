@@ -22,15 +22,6 @@ void ATScheduler::SchedulePacket(Ptr<Packet> packet) {
     tunnelApp->TunSendIfe(packet, path);
 }
 
-float ATScheduler::QueueTime(uint path) {
-    float qt = 0;
-    for(auto &unack_pkt : unack[path]) {
-        //NS_LOG_UNCOND("PKT IDLE TIME: " << path_queueing_times[path] << " " << " " << unack_pkt.idle_time << path);
-        qt += path_queueing_times[path];
-    }
-    return qt;
-}
-
 void ATScheduler::OnSend(Ptr<Packet> packet, TunHeader &header) {
     MPScheduler::OnSend(packet, header);
     header.time = ATScheduler::ArrivalTime(header.path);
@@ -50,10 +41,14 @@ UnackPacket ATScheduler::OnAck(TunHeader ackHeader, bool &loss) {
     return pkt;
 }
 
-float ATScheduler::ArrivalTime(uint path) {
-    float at = path_arrival_times[path];
-    at += QueueTime(path);
+float ATScheduler::ArrivalTime(uint path, uint packet) {
+    float at_previous = packet == 0 ? path_arrival_times[path] : ArrivalTime(path, packet - 1);
     //at += path_queueing_times[path];
     //NS_LOG_UNCOND("AT: " << at << " " << path_queueing_times[path] << " " << path);
-    return fmax(at, delays[path] + Simulator::Now().GetSeconds());
+    float delivery_time = packet == unack[path].size() ? Simulator::Now().GetSeconds() : unack[path][packet].send_time;
+    return fmax(at_previous, delays[path] + delivery_time) + path_queueing_times[path];
+}
+
+float ATScheduler::ArrivalTime(uint path) {
+    return ArrivalTime(path, unack[path].size());
 }

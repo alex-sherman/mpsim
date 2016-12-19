@@ -8,7 +8,7 @@
 #include "ns3/applications-module.h"
 #include "ns3/virtual-net-device.h"
 #include "scheduler.h"
-#include <vector>
+#include <list>
 
 using namespace ns3;
 using namespace std;
@@ -29,6 +29,10 @@ public:
   bool OnTunSend(Ptr<Packet> packet, const Address &src, const Address &dst, uint16_t proto);
   void TunSendIfe(Ptr<Packet> packet, uint interface);
   void OnPacketRecv(Ptr<Socket> socket);
+  void ServiceReorderBuffer();
+  void DeliverPacket(Ptr<Packet> packet, Ptr<VirtualNetDevice> m_tun_device);
+
+  double reorder_latency = 0.15;
 
 private:
   virtual void StartApplication (void);
@@ -50,6 +54,8 @@ private:
   EventId         m_sendEvent;
   bool            m_running;
   uint32_t        m_packetsSent;
+  uint            m_last_sent_seq = 1;
+  list<Ptr<Packet>> m_reorder_buffer;
 };
 
 #endif
