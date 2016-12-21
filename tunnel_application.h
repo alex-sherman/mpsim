@@ -39,6 +39,7 @@ private:
   virtual void StopApplication (void);
 
   std::ofstream   stream;
+  std::ofstream   stream2;
   bool            m_log_packets;
   uint32_t        m_seq;
   MPScheduler *   m_scheduler;

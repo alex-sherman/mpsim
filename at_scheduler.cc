@@ -4,8 +4,9 @@
 void ATScheduler::Init(uint numPaths, TunnelApp *tunnelApp) {
     MPScheduler::Init(numPaths, tunnelApp);
     for(uint i = 0; i < numPaths; i++) {
-        path_queueing_times.push_back(0);
-        path_arrival_times.push_back(0);
+        NS_LOG_UNCOND(i << " " << rates[i] << " " << rates[i].CalculateBytesTxTime(1300).GetSeconds());
+        path_queueing_times.push_back(rates[i].CalculateBytesTxTime(1300).GetSeconds());
+        path_arrival_times.push_back(delays[i]);
     }
 }
 
@@ -14,6 +15,7 @@ void ATScheduler::SchedulePacket(Ptr<Packet> packet) {
     float min_arrival_time = -1;
     for(uint i = 0; i < path_queueing_times.size(); i++) {
         float at = ArrivalTime(i);
+        //NS_LOG_UNCOND("Path " << i << " " << at << " " << path_queueing_times[i] << " " << path_arrival_times[i]);
         if(at < min_arrival_time || min_arrival_time == -1) {
             path = i;
             min_arrival_time = at;
@@ -31,7 +33,7 @@ UnackPacket ATScheduler::OnAck(TunHeader ackHeader, bool &loss) {
     //NS_LOG_UNCOND("Before " << ArrivalTime(ackHeader.path) << " " << (int)ackHeader.path);
     UnackPacket pkt = MPScheduler::OnAck(ackHeader, loss);
     path_arrival_times[ackHeader.path] = ackHeader.arrival_time;
-    path_queueing_times[ackHeader.path] = ackHeader.queueing_time;
+    //path_queueing_times[ackHeader.path] = ackHeader.queueing_time;
     if(!loss) {
     }
     else {

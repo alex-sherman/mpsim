@@ -14,6 +14,7 @@
 #include "ns3/virtual-net-device.h"
 
 #include "tunnel_application.h"
+#include "tcp_sender.h"
 
 using namespace ns3;
 
@@ -27,10 +28,11 @@ static void SinkRx (std::string path, Ptr<const Packet> p, const Address &addres
 }
 
 
-static void
-CwndTracer (uint32_t oldval, uint32_t newval)
+void
+CwndChange (uint32_t oldval, uint32_t newval)
 {
-  NS_LOG_UNCOND(Simulator::Now ().GetSeconds () << " " << newval << std::endl);
+    if(newval < oldval)
+        NS_LOG_UNCOND(Simulator::Now ().GetSeconds () << " " << newval);
 }
 
 int main (int argc, char *argv[])
@@ -53,9 +55,9 @@ int main (int argc, char *argv[])
     internet.Install (nSrcDst);
 
     vector<tuple<const char*, const char*>> interfaces;
-    interfaces.push_back(make_tuple("1Mbps", "51ms"));
+    interfaces.push_back(make_tuple("1Mbps", "50ms"));
     interfaces.push_back(make_tuple("2Mbps", "50ms"));
-    interfaces.push_back(make_tuple("5Mbps", "150ms"));
+    interfaces.push_back(make_tuple("2Mbps", "150ms"));
 
     vector<Ptr<Queue>> queues;
     vector<DataRate> rates;
@@ -93,14 +95,14 @@ int main (int argc, char *argv[])
     sinkApp.Stop (Seconds (30.0));
 
     // Create UDP sender
-    OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
+    /*OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
     clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
-    clientHelper.SetConstantRate(DataRate("3Mbps"), 1300);
+    clientHelper.SetConstantRate(DataRate("1Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
-    clientApp.Stop (Seconds (20.0));
+    clientApp.Stop (Seconds (20.0));*/
 
 
     // Create TCP server sink
@@ -112,14 +114,14 @@ int main (int argc, char *argv[])
     sinkApp2.Stop (Seconds (30.0));
 
     // Create TCP sender
-    OnOffHelper clientHelper2 ("ns3::TcpSocketFactory", Address ());
-    clientHelper2.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
-    clientHelper2.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
-    clientHelper2.SetAttribute ("Remote", AddressValue(sinkLocalAddress2));
-    //clientHelper2.SetConstantRate(DataRate("4.5Mbps"), 1300);
-    ApplicationContainer clientApp2 = clientHelper2.Install(nSrc);
-    clientApp2.Start (Seconds (1.0));
-    clientApp2.Stop (Seconds (20.0));
+    Ptr<Socket> ns3TcpSocket = Socket::CreateSocket (nSrc, TcpSocketFactory::GetTypeId ());
+    ns3TcpSocket->TraceConnectWithoutContext("CongestionWindow", MakeCallback (&CwndChange));
+
+    Ptr<MyApp> tcp_app = CreateObject<MyApp>();
+    tcp_app->Setup (ns3TcpSocket, sinkLocalAddress2, 1040, DataRate ("10Mbps"));
+    nSrc->AddApplication (tcp_app);
+    tcp_app->SetStartTime (Seconds (1.));
+    tcp_app->SetStopTime (Seconds (10.));
 
 
     LogComponentEnableAll (LOG_PREFIX_TIME);
@@ -127,7 +129,7 @@ int main (int argc, char *argv[])
 
     Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::PacketSink/Rx",
                     MakeCallback (&SinkRx));
-    Config::Connect ("/NodeList/*/$ns3::TcpL4Protocol/SocketList/*/CongestionWindow", MakeCallback (&CwndTracer));
+    Config::ConnectWithoutContext("/NodeList/0/$ns3::TcpL4Protocol/SocketList/1/CongestionWindow", MakeCallback (&CwndChange));
 
     Simulator::Run ();
     Simulator::Destroy ();

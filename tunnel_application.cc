@@ -47,6 +47,7 @@ void
 TunnelApp::Setup (MPScheduler *scheduler, Ptr<Node> node, Ipv4Address tun_address, Ipv4Address remote_address, bool log_packets)
 {
     stream.open("packet_log");
+    stream2.open("delivery_log");
     m_log_packets = log_packets;
     m_seq = 1;
     m_scheduler = scheduler;
@@ -123,6 +124,9 @@ void TunnelApp::DeliverPacket(Ptr<Packet> packet, Ptr<VirtualNetDevice> m_tun_de
     packet->RemoveHeader(tunHeader);
     m_last_sent_seq = tunHeader.seq + 1;
     m_tun_device->Receive(packet, 0x0800, m_tun_device->GetAddress (), m_tun_device->GetAddress (), NetDevice::PACKET_HOST);
+    if(m_log_packets)
+        stream2 << "Deliver: " << Simulator::Now().GetSeconds() << " " << tunHeader << ",size=" << packet->GetSize()
+            << ",travel_time=" << Simulator::Now().GetSeconds() - tunHeader.time << "\n";
 }
 
 void TunnelApp::ServiceReorderBuffer() {
@@ -131,6 +135,7 @@ void TunnelApp::ServiceReorderBuffer() {
         Ptr<Packet> packet = m_reorder_buffer.front();
         packet->PeekHeader(header);
         if(header.seq == m_last_sent_seq || Simulator::Now().GetSeconds() - header.arrival_time > reorder_latency) {
+            //NS_LOG_UNCOND("Reorder head: " << header.seq << " " << " " << header.arrival_time << " " << m_last_sent_seq << " " << Simulator::Now().GetSeconds());
             m_reorder_buffer.pop_front();
             DeliverPacket(packet, m_tun_device);
         }
