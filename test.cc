@@ -55,9 +55,10 @@ int main (int argc, char *argv[])
     internet.Install (nSrcDst);
 
     vector<tuple<const char*, const char*>> interfaces;
-    interfaces.push_back(make_tuple("1Mbps", "50ms"));
-    interfaces.push_back(make_tuple("2Mbps", "50ms"));
-    interfaces.push_back(make_tuple("2Mbps", "150ms"));
+    interfaces.push_back(make_tuple("1Mbps", "15ms"));
+    interfaces.push_back(make_tuple("2Mbps", "15ms"));
+    //Remember if there is a delay difference of over 2x EDPF and AT will struggle not use the slower links!!!
+    interfaces.push_back(make_tuple("2Mbps", "20ms"));
 
     vector<Ptr<Queue>> queues;
     vector<DataRate> rates;
@@ -95,14 +96,14 @@ int main (int argc, char *argv[])
     sinkApp.Stop (Seconds (30.0));
 
     // Create UDP sender
-    /*OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
+    OnOffHelper clientHelper ("ns3::UdpSocketFactory", Address ());
     clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     clientHelper.SetAttribute ("Remote", AddressValue(sinkLocalAddress));
-    clientHelper.SetConstantRate(DataRate("1Mbps"), 1300);
+    clientHelper.SetConstantRate(DataRate("0.1Mbps"), 1300);
     ApplicationContainer clientApp = clientHelper.Install(nSrc);
     clientApp.Start (Seconds (1.0));
-    clientApp.Stop (Seconds (20.0));*/
+    clientApp.Stop (Seconds (20.0));
 
 
     // Create TCP server sink
@@ -114,14 +115,16 @@ int main (int argc, char *argv[])
     sinkApp2.Stop (Seconds (30.0));
 
     // Create TCP sender
-    Ptr<Socket> ns3TcpSocket = Socket::CreateSocket (nSrc, TcpSocketFactory::GetTypeId ());
-    ns3TcpSocket->TraceConnectWithoutContext("CongestionWindow", MakeCallback (&CwndChange));
+    for(int i = 0; i < 10; i++) {
+        Ptr<Socket> ns3TcpSocket = Socket::CreateSocket (nSrc, TcpSocketFactory::GetTypeId ());
+        ns3TcpSocket->TraceConnectWithoutContext("CongestionWindow", MakeCallback (&CwndChange));
 
-    Ptr<MyApp> tcp_app = CreateObject<MyApp>();
-    tcp_app->Setup (ns3TcpSocket, sinkLocalAddress2, 1040, DataRate ("10Mbps"));
-    nSrc->AddApplication (tcp_app);
-    tcp_app->SetStartTime (Seconds (1.));
-    tcp_app->SetStopTime (Seconds (10.));
+        Ptr<MyApp> tcp_app = CreateObject<MyApp>();
+        tcp_app->Setup (ns3TcpSocket, sinkLocalAddress2, 1300, DataRate ("30Mbps"));
+        nSrc->AddApplication (tcp_app);
+        tcp_app->SetStartTime (Seconds (1.));
+        tcp_app->SetStopTime (Seconds (30.));
+    }
 
 
     LogComponentEnableAll (LOG_PREFIX_TIME);

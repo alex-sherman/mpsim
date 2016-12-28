@@ -28,6 +28,7 @@ public:
         rates(rates), delays(delays), tx_queues(queues) { }
     virtual void Init(uint numPaths, TunnelApp *tunnelApp) {
         this->tunnelApp = tunnelApp;
+        this->numPaths = numPaths;
         for(uint i = 0; i < numPaths; i++) {
             unack.push_back(vector<UnackPacket>());
             path_send_times.push_back(0);
@@ -75,6 +76,7 @@ public:
     vector<Ptr<Queue>> tx_queues;
     vector<vector<UnackPacket>> unack;
     TunnelApp *tunnelApp;
+    uint numPaths;
 };
 
 class CWNDScheduler : public MPScheduler {
@@ -106,12 +108,10 @@ class EDPFScheduler : public MPScheduler {
  public:
     EDPFScheduler(vector<DataRate> rates, vector<double> delays, vector<Ptr<Queue>> queues) :
         MPScheduler(rates, delays, queues) { }
-    void Init(uint numPaths, TunnelApp *tunnelApp);
     void SchedulePacket(Ptr<Packet> packet);
 
  private:
     double arrival_time(double packet_arrival, int path, int packet_size);
-    int TrySendPacket(Ptr<Packet> packet);
     Time next_available(int link);
 };
 class ATScheduler : public MPScheduler {

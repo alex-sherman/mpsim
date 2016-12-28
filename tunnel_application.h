@@ -32,7 +32,8 @@ public:
   void ServiceReorderBuffer();
   void DeliverPacket(Ptr<Packet> packet, Ptr<VirtualNetDevice> m_tun_device);
 
-  double reorder_latency = 0.15;
+  double reorder_latency = 0.08;
+  bool            m_log_packets;
 
 private:
   virtual void StartApplication (void);
@@ -40,7 +41,6 @@ private:
 
   std::ofstream   stream;
   std::ofstream   stream2;
-  bool            m_log_packets;
   uint32_t        m_seq;
   MPScheduler *   m_scheduler;
   Ptr<Node>       m_node;

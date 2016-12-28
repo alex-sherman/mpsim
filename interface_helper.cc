@@ -20,7 +20,8 @@ NetDeviceContainer AddInterface(NodeContainer nc, const char* rate, const char* 
     
     PointToPointHelper p2p;
     p2p.SetQueue ("ns3::DropTailQueue", 
-              "MaxPackets", UintegerValue (DataRate(rate).GetBitRate() * Time(delay).GetSeconds() / 1300 * 4));
+              "MaxBytes", UintegerValue (DataRate(rate).GetBitRate() * Time(delay).GetSeconds() * 2 / 8),
+              "Mode", EnumValue(ns3::Queue::QUEUE_MODE_BYTES));
     p2p.SetDeviceAttribute ("DataRate", StringValue (rate));
     p2p.SetChannelAttribute ("Delay", StringValue (delay));
     NetDeviceContainer ndc = p2p.Install (nc);
